@@ -1,75 +1,95 @@
 package main
 
 import (
+	"context"
 	"log"
+	"strconv"
+	"time"
 
-	fiber "github.com/gofiber/fiber/v2"
-	logger "github.com/gofiber/fiber/v2/middleware/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Panicf("%s: %s", msg, err)
+	}
+}
+
+func fib(n int) int {
+	if n == 0 {
+		return 0
+	} else if n == 1 {
+		return 1
+	} else {
+		return fib(n-1) + fib(n-2)
+	}
+}
+
 func main() {
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	failOnError(err, "Failed to connect to RabbitMQ")
+	defer conn.Close()
 
-	// Create a new RabbitMQ connection.
-	connectRabbitMQ, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-	if err != nil {
-		panic(err)
-	}
-	defer connectRabbitMQ.Close()
+	ch, err := conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	defer ch.Close()
 
-	// Let's start by opening a channel to our RabbitMQ
-	// instance over the connection we have already
-	// established.
-	channelRabbitMQ, err := connectRabbitMQ.Channel()
-	if err != nil {
-		panic(err)
-	}
-	defer channelRabbitMQ.Close()
-
-	// With the instance and declare Queues that we can
-	// publish and subscribe to.
-	_, err = channelRabbitMQ.QueueDeclare(
-		"QueueService1", // queue name
-		true,            // durable
-		false,           // auto delete
-		false,           // exclusive
-		false,           // no wait
-		nil,             // arguments
+	q, err := ch.QueueDeclare(
+		"rpc_queue", // name
+		false,       // durable
+		false,       // delete when unused
+		false,       // exclusive
+		false,       // no-wait
+		nil,         // arguments
 	)
-	if err != nil {
-		panic(err)
-	}
+	failOnError(err, "Failed to declare a queue")
 
-	// Create a new Fiber instance.
-	app := fiber.New()
-
-	// Add middleware.
-	app.Use(
-		logger.New(), // add simple logger
+	err = ch.Qos(
+		1,     // prefetch count
+		0,     // prefetch size
+		false, // global
 	)
+	failOnError(err, "Failed to set QoS")
 
-	// Add route.
-	app.Get("/send", func(c *fiber.Ctx) error {
-		// Create a message to publish.
-		message := amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(c.Query("msg")),
+	msgs, err := ch.Consume(
+		q.Name, // queue
+		"",     // consumer
+		false,  // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	failOnError(err, "Failed to register a consumer")
+
+	var forever chan struct{}
+
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		for d := range msgs {
+			n, err := strconv.Atoi(string(d.Body))
+			failOnError(err, "Failed to convert body to integer")
+
+			log.Printf(" [.] fib(%d)", n)
+			response := fib(n)
+
+			err = ch.PublishWithContext(ctx,
+				"",        // exchange
+				d.ReplyTo, // routing key
+				false,     // mandatory
+				false,     // immediate
+				amqp.Publishing{
+					ContentType:   "text/plain",
+					CorrelationId: d.CorrelationId,
+					Body:          []byte(strconv.Itoa(response)),
+				})
+			failOnError(err, "Failed to publish a message")
+
+			d.Ack(false)
 		}
+	}()
 
-		// Attempt to publish a message to the queue.
-		if err := channelRabbitMQ.Publish(
-			"",              // exchange
-			"QueueService1", // queue name
-			false,           // mandatory
-			false,           // immediate
-			message,         // message to publish
-		); err != nil {
-			return err
-		}
-
-		return nil
-	})
-
-	// Start Fiber API server.
-	log.Fatal(app.Listen(":3000"))
+	log.Printf(" [*] Awaiting RPC requests")
+	<-forever
 }
