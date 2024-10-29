@@ -45,8 +45,7 @@ func Init(URI string) error {
 	return nil
 }
 
-// AddTask is a global function to add tasks (IDs) to the queue
-func AddTask(taskID string) {
+func AddToQueue(taskID string) {
 
 	err := ch.Publish(
 		"",     // exchange
@@ -60,7 +59,7 @@ func AddTask(taskID string) {
 		})
 	failOnError(err, "Failed to publish a message")
 
-	log.Printf(" [x] Sent task ID: %d", taskID)
+	log.Printf(" [x] Sent task ID: %s", taskID)
 }
 
 func Cleanup() {

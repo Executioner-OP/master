@@ -6,16 +6,16 @@ import (
 	"log"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type ExecutionRequest struct {
-	ID     string `bson:"id"`
-	Code   string `bson:"code,omitempty"`
-	Output string `bson:"output,omitempty"`
-	IsDone bool   `bson:"isDone"`
+	ID     primitive.ObjectID `bson:"_id,omitempty"`
+	Code   string             `bson:"code,omitempty"`
+	Output string             `bson:"output,omitempty"`
+	IsDone bool               `bson:"isDone"`
 }
 
 var (
@@ -30,60 +30,36 @@ func failOnError(err error, msg string) {
 }
 
 func Connect(MONGO_URI string) error {
-
-	// Connect to the database.
 	clientOption := options.Client().ApplyURI(MONGO_URI)
-	client, err := mongo.Connect(context.Background(), clientOption)
+	client, err := mongo.Connect(nil, clientOption)
 	failOnError(err, "Failed to connect to MongoDB")
 
-	// Check the connection.
-	err = client.Ping(context.Background(), nil)
+	err = client.Ping(nil, nil)
 	failOnError(err, "Failed to ping MongoDB")
 
-	// Create collection
 	collection = client.Database("executorDB").Collection("executions")
-	failOnError(err, "Failed to create collection")
-
 	fmt.Println("Connected to db")
 
 	return nil
 }
 
-func AddExecutionRequest(id string, code string) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+func AddToDb(code string, IsDone bool) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	request := ExecutionRequest{
-		ID:     id,
 		Code:   code,
-		IsDone: false,
+		IsDone: IsDone,
 	}
 
-	_, err := collection.InsertOne(ctx, request)
+	// Insert document and get the generated ID
+	result, err := collection.InsertOne(ctx, request)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert execution request: %w", err)
 	}
 
+	// Get the inserted ID and convert to string
+	id := result.InsertedID.(primitive.ObjectID).Hex()
+
 	return id, nil
-}
-
-// UpdateExecutionRequest updates the execution request with output and marks it as done
-func UpdateExecutionRequest(id string, output string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	filter := bson.M{"id": id}
-	update := bson.M{
-		"$set": bson.M{
-			"output": output,
-			"isDone": true,
-		},
-	}
-
-	_, err := collection.UpdateOne(ctx, filter, update)
-	if err != nil {
-		return fmt.Errorf("failed to update execution request: %w", err)
-	}
-
-	return nil
 }
