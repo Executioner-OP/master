@@ -12,7 +12,6 @@ import (
 )
 
 type RequestData struct {
-	ID   string `json:"id"`
 	Code string `json:"code"`
 }
 
@@ -37,16 +36,20 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add request to the database
+	print(requestData.Code)
 	id, err := dbHandler.AddToDb(requestData.Code, false)
-
-	requestData.ID = id
 
 	if err != nil {
 		http.Error(w, "Failed to add request to database", http.StatusInternalServerError)
 		return
 	}
 
-	queueHandler.AddToQueue(id)
+	err = queueHandler.AddToQueue(id)
+
+	if err != nil {
+		http.Error(w, "Failed to add request to queue", http.StatusInternalServerError)
+		return
+	}
 
 	// Send response
 	w.Header().Set("Content-Type", "application/json")

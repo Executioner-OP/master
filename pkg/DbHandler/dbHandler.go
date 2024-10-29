@@ -14,7 +14,6 @@ import (
 type ExecutionRequest struct {
 	ID     primitive.ObjectID `bson:"_id,omitempty"`
 	Code   string             `bson:"code,omitempty"`
-	Output string             `bson:"output,omitempty"`
 	IsDone bool               `bson:"isDone"`
 }
 

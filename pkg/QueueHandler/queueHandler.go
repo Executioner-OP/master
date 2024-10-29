@@ -45,7 +45,7 @@ func Init(URI string) error {
 	return nil
 }
 
-func AddToQueue(taskID string) {
+func AddToQueue(taskID string) error {
 
 	err := ch.Publish(
 		"",     // exchange
@@ -57,9 +57,13 @@ func AddToQueue(taskID string) {
 			ContentType:  "text/plain",
 			Body:         []byte(taskID),
 		})
-	failOnError(err, "Failed to publish a message")
 
-	log.Printf(" [x] Sent task ID: %s", taskID)
+	if err != nil {
+		return fmt.Errorf("Failed to publish a message: %w", err)
+	}
+
+	fmt.Println("Added task to queue")
+	return nil
 }
 
 func Cleanup() {
