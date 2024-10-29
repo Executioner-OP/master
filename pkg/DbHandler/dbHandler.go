@@ -4,47 +4,86 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
+	"time"
 
-	"github.com/joho/godotenv"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func main() {
-	Connect()
+type ExecutionRequest struct {
+	ID     string `bson:"id"`
+	Code   string `bson:"code,omitempty"`
+	Output string `bson:"output,omitempty"`
+	IsDone bool   `bson:"isDone"`
 }
 
-func Connect() *mongo.Collection {
-	// Find .evn
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s", err)
-	}
+var (
+	collection *mongo.Collection
+)
 
-	// Get value from .env
-	MONGO_URI := os.Getenv("MONGO_URI")
+// Helper function to handle errors
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Panicf("%s: %s", msg, err)
+	}
+}
+
+func Connect(MONGO_URI string) error {
 
 	// Connect to the database.
 	clientOption := options.Client().ApplyURI(MONGO_URI)
 	client, err := mongo.Connect(context.Background(), clientOption)
-	if err != nil {
-		log.Fatal(err)
-	}
+	failOnError(err, "Failed to connect to MongoDB")
 
 	// Check the connection.
 	err = client.Ping(context.Background(), nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	failOnError(err, "Failed to ping MongoDB")
 
 	// Create collection
-	collection := client.Database("testdb").Collection("test")
-	if err != nil {
-		log.Fatal(err)
-	}
+	collection = client.Database("executorDB").Collection("executions")
+	failOnError(err, "Failed to create collection")
 
 	fmt.Println("Connected to db")
 
-	return collection
+	return nil
+}
+
+func AddExecutionRequest(id string, code string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	request := ExecutionRequest{
+		ID:     id,
+		Code:   code,
+		IsDone: false,
+	}
+
+	_, err := collection.InsertOne(ctx, request)
+	if err != nil {
+		return "", fmt.Errorf("failed to insert execution request: %w", err)
+	}
+
+	return id, nil
+}
+
+// UpdateExecutionRequest updates the execution request with output and marks it as done
+func UpdateExecutionRequest(id string, output string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	filter := bson.M{"id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"output": output,
+			"isDone": true,
+		},
+	}
+
+	_, err := collection.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return fmt.Errorf("failed to update execution request: %w", err)
+	}
+
+	return nil
 }

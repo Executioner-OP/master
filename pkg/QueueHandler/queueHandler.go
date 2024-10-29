@@ -1,6 +1,7 @@
 package queueHandler
 
 import (
+	"fmt"
 	"log"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -20,9 +21,9 @@ func failOnError(err error, msg string) {
 }
 
 // Initialize RabbitMQ connection, channel, and declare a durable task queue
-func Init() {
+func Init(URI string) error {
 	var err error
-	conn, err = amqp.Dial("amqp://admin:ello@206.189.131.249:5672/")
+	conn, err = amqp.Dial(URI)
 	failOnError(err, "Failed to connect to RabbitMQ")
 
 	ch, err = conn.Channel()
@@ -38,6 +39,10 @@ func Init() {
 		nil,          // arguments
 	)
 	failOnError(err, "Failed to declare a queue")
+
+	fmt.Println("Connected to RabbitMQ")
+
+	return nil
 }
 
 // AddTask is a global function to add tasks (IDs) to the queue
