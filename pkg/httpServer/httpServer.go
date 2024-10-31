@@ -36,7 +36,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add request to the database
-	print(requestData.Code)
+
 	id, err := dbHandler.AddToDb(requestData.Code, false)
 
 	if err != nil {
@@ -53,5 +53,4 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Send response
 	w.Header().Set("Content-Type", "application/json")
-
 }
