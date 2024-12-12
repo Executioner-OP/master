@@ -33,8 +33,8 @@ func Connect(MONGO_URI string) error {
 	client, err := mongo.Connect(nil, clientOption)
 	failOnError(err, "Failed to connect to MongoDB")
 
-	err = client.Ping(nil, nil)
-	failOnError(err, "Failed to ping MongoDB")
+	// err = client.Ping(nil, nil)
+	// failOnError(err, "Failed to ping MongoDB")
 
 	collection = client.Database("executorDB").Collection("executions")
 	fmt.Println("Connected to db")

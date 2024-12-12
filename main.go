@@ -1,19 +1,21 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/joho/godotenv"
 
-	"github.com/Executioner-OP/master/pkg/dbHandler"
-	"github.com/Executioner-OP/master/pkg/httpServer"
-	"github.com/Executioner-OP/master/pkg/queueHandler"
+	"github.com/Executioner-OP/master/dbHandler"
+	"github.com/Executioner-OP/master/httpServer"
+	"github.com/Executioner-OP/master/queueHandler"
 )
 
 func main() {
 
 	// Find .evn
+	fmt.Println("Program Started")
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file: %s", err)
