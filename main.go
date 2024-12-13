@@ -7,9 +7,9 @@ import (
 
 	"github.com/joho/godotenv"
 
-	"github.com/Executioner-OP/master/dbHandler"
-	"github.com/Executioner-OP/master/httpServer"
-	"github.com/Executioner-OP/master/queueHandler"
+	"github.com/Executioner-OP/master/db"
+	"github.com/Executioner-OP/master/server"
+	"github.com/Executioner-OP/master/queue"
 )
 
 func main() {
@@ -24,12 +24,12 @@ func main() {
 	MONGO_URI := os.Getenv("MONGO_URI")
 
 	// Initialize database and queue synchronously
-	if err := dbHandler.Connect(MONGO_URI); err != nil {
+	if err := db.Connect(MONGO_URI); err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
-	if err := queueHandler.Init(RABBITMQ_URI); err != nil {
+	if err := queue.Init(RABBITMQ_URI); err != nil {
 		log.Fatalf("Failed to initialize queue: %v", err)
 	}
 
-	httpServer.Init()
+	server.Init()
 }

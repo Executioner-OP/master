@@ -1,4 +1,4 @@
-package queueHandler
+package queue
 
 import (
 	"fmt"
@@ -45,7 +45,7 @@ func Init(URI string) error {
 	return nil
 }
 
-func AddToQueue(taskID string) error {
+func AddToQueue(executionTask []byte) error {
 
 	err := ch.Publish(
 		"",     // exchange
@@ -55,7 +55,7 @@ func AddToQueue(taskID string) error {
 		amqp.Publishing{
 			DeliveryMode: amqp.Persistent, // Make message persistent
 			ContentType:  "text/plain",
-			Body:         []byte(taskID),
+			Body:         executionTask,
 		})
 
 	if err != nil {
