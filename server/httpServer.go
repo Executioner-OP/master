@@ -1,12 +1,13 @@
-package httpServer
+package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	"github.com/Executioner-OP/master/dbHandler"
-	"github.com/Executioner-OP/master/queueHandler"
+	"github.com/Executioner-OP/master/db"
+	"github.com/Executioner-OP/master/queue"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -22,12 +23,8 @@ func Init() {
 	http.ListenAndServe(":3000", r)
 }
 
-type RequestData struct {
-	Code string `json:"code"`
-}
-
 func handleRequest(w http.ResponseWriter, r *http.Request) {
-	var requestData RequestData
+	var requestData db.ExecutionRequest
 
 	// Decode request body
 	if err := json.NewDecoder(r.Body).Decode(&requestData); err != nil {
@@ -36,7 +33,7 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Add request to the database
-	id, err := dbHandler.AddToDb(requestData.Code, false)
+	requestData, err := db.AddToDb(requestData)
 
 	if err != nil {
 		http.Error(w, "Failed to add request to database", http.StatusInternalServerError)
@@ -44,7 +41,10 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Added request to database")
 
-	err = queueHandler.AddToQueue(id)
+	// encoding the request data to bytes and adding it to the queue
+	reqBodyBytes := new(bytes.Buffer)
+	json.NewEncoder(reqBodyBytes).Encode(requestData)
+	err = queue.AddToQueue(reqBodyBytes.Bytes())
 
 	if err != nil {
 		http.Error(w, "Failed to add request to queue", http.StatusInternalServerError)
@@ -54,4 +54,5 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Send response
 	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Request added to queue"}`))
 }

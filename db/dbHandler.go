@@ -1,4 +1,4 @@
-package dbHandler
+package db
 
 import (
 	"context"
@@ -12,9 +12,17 @@ import (
 )
 
 type ExecutionRequest struct {
-	ID     primitive.ObjectID `bson:"_id,omitempty"`
-	Code   string             `bson:"code,omitempty"`
-	IsDone bool               `bson:"isDone"`
+	ID             primitive.ObjectID `bson:"_id"`
+	Code           string             `bson:"code"`
+	IsDone         bool               `bson:"isDone"`
+	LanguageId     int                `bson:"languageId"`
+	StandardInput  string             `bson:"standardInput"`
+	StandardOutput string             `bson:"standardOutput"`
+	ExpectedOutput string             `bson:"expectedOutput"`
+	Status         string             `bson:"status"`
+	Verdict        string             `bson:"verdict"`
+	TimeLimit      int                `bson:"timeLimit"`
+	MemoryLimit    int                `bson:"memoryLimit"`
 }
 
 var (
@@ -42,23 +50,17 @@ func Connect(MONGO_URI string) error {
 	return nil
 }
 
-func AddToDb(code string, IsDone bool) (string, error) {
+func AddToDb(req ExecutionRequest) (ExecutionRequest, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	request := ExecutionRequest{
-		Code:   code,
-		IsDone: IsDone,
-	}
+	req.ID = primitive.NewObjectID()
 
 	// Insert document and get the generated ID
-	result, err := collection.InsertOne(ctx, request)
+	_, err := collection.InsertOne(ctx, req)
 	if err != nil {
-		return "", fmt.Errorf("failed to insert execution request: %w", err)
+		return req, fmt.Errorf("failed to insert execution request: %w", err)
 	}
-
-	// Get the inserted ID and convert to string
-	id := result.InsertedID.(primitive.ObjectID).Hex()
-
-	return id, nil
+	fmt.Println("Execution Request: ", req)
+	return req, nil
 }
