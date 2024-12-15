@@ -29,8 +29,9 @@ func main() {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
 	if err := queue.Init(RABBITMQ_URI); err != nil {
-		log.Fatalf("Failed to initialize queue: %v", err)
+		log.Fatalf("Failed to initialize Rabbit queue: %v", err)
 	}
+	taskChannel := make(chan db.ExecutionRequest, 5)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -38,12 +39,13 @@ func main() {
 	// Start HTTP server concurrently
 	go func() {
 		defer wg.Done()
-		server.InitHttpServer()
+		server.InitHttpServer(taskChannel)
 	}()
 
+	// Start gRPC server
 	go func() {
 		defer wg.Done()
-		server.InitGrpcServer()
+		server.InitGrpcServer(taskChannel)
 	}()
 
 	// Wait fot both servers to finish

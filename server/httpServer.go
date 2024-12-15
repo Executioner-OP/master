@@ -1,20 +1,21 @@
 package server
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/Executioner-OP/master/db"
-	"github.com/Executioner-OP/master/queue"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func InitHttpServer() {
+func InitHttpServer(taskChannel chan db.ExecutionRequest) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+
+	// Binding Channel
+	TaskChannel = taskChannel
 
 	// Define the main endpoint to handle incoming requests
 	r.Post("/request", handleRequest)
@@ -41,15 +42,18 @@ func handleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Added request to database")
 
-	// encoding the request data to bytes and adding it to the queue
-	reqBodyBytes := new(bytes.Buffer)
-	json.NewEncoder(reqBodyBytes).Encode(requestData)
-	err = queue.AddToQueue(reqBodyBytes.Bytes())
+	// Add request to channel
+	TaskChannel <- requestData
 
-	if err != nil {
-		http.Error(w, "Failed to add request to queue", http.StatusInternalServerError)
-		return
-	}
+	// encoding the request data to bytes and adding it to the queue
+	// reqBodyBytes := new(bytes.Buffer)
+	// json.NewEncoder(reqBodyBytes).Encode(requestData)
+	// err = queue.AddToQueue(reqBodyBytes.Bytes())
+
+	// if err != nil {
+	// 	http.Error(w, "Failed to add request to queue", http.StatusInternalServerError)
+	// 	return
+	// }
 	fmt.Println("Added request to queue")
 
 	// Send response
