@@ -21,4 +21,5 @@ message ExecutionTask {
     string Verdict = 9;
     int32 TimeLimit = 10;
     int32 MemoryLimit = 11;
+    bool hasTask = 12;
 }

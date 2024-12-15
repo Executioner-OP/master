@@ -28,6 +28,7 @@ func (s *server) GetExecution(context context.Context, executionRequest *pb.Exec
 		Verdict:        "",
 		TimeLimit:      5,
 		MemoryLimit:    256,
+		HasTask:        true,
 	}
 
 	return &dummyExecutionTask, nil
