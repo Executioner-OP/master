@@ -9,7 +9,6 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/Executioner-OP/master/db"
-	"github.com/Executioner-OP/master/queue"
 	"github.com/Executioner-OP/master/server"
 )
 
@@ -21,16 +20,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file: %s", err)
 	}
-	RABBITMQ_URI := os.Getenv("RABBITMQ_URI")
+	// RABBITMQ_URI := os.Getenv("RABBITMQ_URI")
 	MONGO_URI := os.Getenv("MONGO_URI")
 
 	// Initialize database and queue synchronously
 	if err := db.Connect(MONGO_URI); err != nil {
 		log.Fatalf("Failed to connect to DB: %v", err)
 	}
-	if err := queue.Init(RABBITMQ_URI); err != nil {
-		log.Fatalf("Failed to initialize Rabbit queue: %v", err)
-	}
+	// if err := queue.Init(RABBITMQ_URI); err != nil {
+	// 	log.Fatalf("Failed to initialize Rabbit queue: %v", err)
+	// }
 	taskChannel := make(chan db.ExecutionRequest, 5)
 
 	var wg sync.WaitGroup
