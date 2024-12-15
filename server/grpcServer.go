@@ -23,10 +23,10 @@ var (
 )
 
 func (s *server) GetExecution(ctx context.Context, req *pb.ExecutionRequest) (*pb.ExecutionTask, error) {
-	if taskQueue.IsEmpty() {
+	if taskQueue.IsPendingEmpty() {
 		return &pb.ExecutionTask{HasTask: false}, nil
 	}
-	task, _ := taskQueue.Pop()
+	task, _ := taskQueue.PopFromPending()
 
 	return &pb.ExecutionTask{
 		ID:             task.ID.String(),
@@ -52,7 +52,7 @@ func InitGrpcServer(taskChannel chan db.ExecutionRequest) {
 
 	go func() {
 		for task := range taskChannel {
-			taskQueue.Add(task, taskTimeout)
+			taskQueue.AddToPending(task, taskTimeout)
 		}
 	}()
 
