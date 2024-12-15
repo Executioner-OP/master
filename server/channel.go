@@ -8,7 +8,7 @@ import (
 )
 
 var TaskChannel chan db.ExecutionRequest
-var PendingChannel chan PendingTask
+var PendingChannel = make(chan PendingTask, 100) // Buffered channel
 
 type PendingTask struct {
 	// don't know any data type helpful to track timestamp
