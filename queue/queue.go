@@ -13,7 +13,7 @@ type Queue struct {
 
 func (q *Queue) Add(task db.ExecutionRequest) {
 	q.Elements = append(q.Elements, task)
-	log.Println("Task %v, added in the queue", task.ID)
+	log.Printf("Task %v, added in the queue", task.ID)
 }
 
 func (q *Queue) Pop() error {

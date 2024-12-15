@@ -134,3 +134,20 @@ func decodeBase64(encoded string) (string, error) {
 	}
 	return string(decodedBytes), nil
 }
+
+func CheckPendingTask(taskId primitive.ObjectID) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Get document from Db
+	var result ExecutionRequest
+	err := collection.FindOne(ctx, bson.M{"_id": taskId}).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return false, fmt.Errorf("no document found with the given ID")
+		}
+		return false, fmt.Errorf("failed to find document: %w", err)
+	}
+
+	return result.IsDone, nil
+}
