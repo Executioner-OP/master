@@ -1,0 +1,24 @@
+syntax="proto3";
+package pb;
+
+option go_package="github.com/Executioner-OP/master/pb";
+
+service Executions {
+    rpc GetExecution(ExecutionRequest) returns (ExecutionTask) {}
+}
+
+message ExecutionRequest {}
+
+message ExecutionTask {
+    string ID = 1;
+    string Code = 2;
+    bool IsDone = 3;
+    int32 LanguageId = 4;
+    string StandardInput = 5;
+    string StandardOutput = 6;
+    string ExpectedOutput = 7;
+    string Status = 8;
+    string Verdict = 9;
+    int32 TimeLimit = 10;
+    int32 MemoryLimit = 11;
+}

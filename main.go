@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/joho/godotenv"
 
 	"github.com/Executioner-OP/master/db"
-	"github.com/Executioner-OP/master/server"
 	"github.com/Executioner-OP/master/queue"
+	"github.com/Executioner-OP/master/server"
 )
 
 func main() {
@@ -31,5 +32,20 @@ func main() {
 		log.Fatalf("Failed to initialize queue: %v", err)
 	}
 
-	server.Init()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	// Start HTTP server concurrently
+	go func() {
+		defer wg.Done()
+		server.InitHttpServer()
+	}()
+
+	go func() {
+		defer wg.Done()
+		server.InitGrpcServer()
+	}()
+
+	// Wait fot both servers to finish
+	wg.Wait()
 }
