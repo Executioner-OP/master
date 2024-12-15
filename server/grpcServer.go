@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/Executioner-OP/master/db"
 	"github.com/Executioner-OP/master/pb"
@@ -18,6 +19,7 @@ type server struct {
 }
 
 var taskQueue = queue.Queue{}
+var pendingQueue = PendingTaskQueue{}
 
 func (s *server) GetExecution(context context.Context, executionRequest *pb.ExecutionRequest) (*pb.ExecutionTask, error) {
 	var executionTask pb.ExecutionTask
@@ -51,6 +53,11 @@ func (s *server) GetExecution(context context.Context, executionRequest *pb.Exec
 		executionTask.LanguageId = int32(task.LanguageId)
 		executionTask.HasTask = true
 		taskQueue.Pop()
+		// Adding Task to Pending Channel
+		var pendingTask PendingTask
+		pendingTask.Task = task
+		pendingTask.TimeStamp = time.Now()
+		PendingChannel <- pendingTask
 		return &executionTask, nil
 	} else {
 		return &dummyExecutionTask, nil
@@ -68,13 +75,21 @@ func InitGrpcServer(taskChannel chan db.ExecutionRequest) {
 	pb.RegisterExecutionsServer(grpcServer, &server{})
 	TaskChannel = taskChannel
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(3)
 
 	// Adding task from channel to queue concurrently
 	go func() {
 		for task := range TaskChannel {
 			taskQueue.Add(task)
 			log.Println("Task added to queue from channel")
+		}
+	}()
+
+	// Checking Pending Queue
+	go func() {
+		for pendingTask := range PendingChannel {
+			pendingQueue.AddPendingTask(pendingTask)
+			log.Println("Task added to Pending queue from channel")
 		}
 	}()
 
