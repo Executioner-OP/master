@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/Executioner-OP/master/db"
 	"github.com/Executioner-OP/master/pb"
@@ -54,10 +53,10 @@ func (s *server) GetExecution(context context.Context, executionRequest *pb.Exec
 		executionTask.HasTask = true
 		taskQueue.Pop()
 		// Adding Task to Pending Channel
-		var pendingTask PendingTask
-		pendingTask.Task = task
-		pendingTask.TimeStamp = time.Now()
-		PendingChannel <- pendingTask
+		// var pendingTask PendingTask
+		// pendingTask.Task = task
+		// pendingTask.TimeStamp = time.Now()
+		// PendingChannel <- pendingTask
 		return &executionTask, nil
 	} else {
 		return &dummyExecutionTask, nil
