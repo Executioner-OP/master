@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: master
+  namespace: remote-code-executor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: master
+  template:
+    metadata:
+      labels:
+        app: master
+    spec:
+      containers:
+      - name: master
+        image: jeetb2022/executioner-op-master:v2.1.1
+        ports:
+        - containerPort: 9001 # RPC Port
+        - containerPort: 3000 # HTTP Port
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: NODE_ENV
+          value: "production"
